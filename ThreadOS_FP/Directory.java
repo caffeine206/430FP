@@ -1,20 +1,18 @@
-/**
- * Created by Derek on 12/5/2014.
- */
 public class Directory {
-    private static int maxChars = 30;
-    private int fsizes[]; // the file name's length
-    private char fnames[][]; // file names
+    private static int maxChars = 30; // max characters of each file name
 
-    public Directory(int maxInumber) {
-        fsizes = new int[maxInumber];
-        for (int i = 0; i < maxInumber; i++) {
-            fsizes[i] = 0;
-        }
+    // Directory entries
+    private int fsize[];        // each element stores a different file size.
+    private char fnames[][];    // each element stores a different file name.
 
-        String root = "/";
-        fsizes[0] = root.length();
-        root.getChars(0, fsizes[0], fnames[0], 0);
+    public Directory( int maxInumber ) { // directory constructor
+        fsizes = new int[maxInumber];     // maxInumber = max files
+        for ( int i = 0; i < maxInumber; i++ )
+            fsize[i] = 0;                 // all file size initialized to 0
+        fnames = new char[maxInumber][maxChars];
+        String root = "/";                // entry(inode) 0 is "/"
+        fsize[0] = root.length( );        // fsize[0] is the size of "/".
+        root.getChars( 0, fsizes[0], fnames[0], 0 ); // fnames[0] includes "/"
     }
 
     public short ialloc(String filename) {
