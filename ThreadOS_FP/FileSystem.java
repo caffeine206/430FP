@@ -19,4 +19,9 @@ public class FileSystem{
 		}
 		close( dirEnt );
 	}	
+
+	public int format( int files ){
+		//TODO
+		return -1; 
+	}
 }
