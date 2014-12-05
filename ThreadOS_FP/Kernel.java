@@ -183,13 +183,12 @@ public class Kernel
                         return fs.write( ftEnt, ( byte[] )args );
                   }
                   return ERROR;
-<<<<<<< HEAD
+
                case CREAD:   // to be implemented in assignment 4
-                  return cache.read( oq, ( byte[] )args ) ? OK : ERROR;
-=======
+                  return cache.read( param, ( byte[] )args ) ? OK : ERROR;
                case CREAD:
                   return cache.read( param, ( byte[] )args ) ? OK : ERROR;
->>>>>>> 9b6fe2798209720c791e04f6156cdc3499838325
+
                case CWRITE:  // to be implemented in assignment 4
                   return cache.write( param, ( byte[] )args ) ? OK : ERROR;
                case CSYNC:   // to be implemented in assignment 4
