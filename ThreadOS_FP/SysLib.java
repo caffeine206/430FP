@@ -21,7 +21,8 @@ public class SysLib {
         putting them into the beginning of buffer. It increments the seek pointer by the number of bytes to have been read. 
         The return value is the number of bytes that have been read, or a negative value upon an error.
         */
-        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE, Kernel.READ, 0, args );
+        // TODO: Look up the file's inode in file descriptor table
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE, Kernel.CREAD, 0, args );
     }
 
     public static int write( int fd, byte buffer[] ){
@@ -32,7 +33,8 @@ public class SysLib {
         The return value is the number of bytes that have been written, or a negative value upon an error.
 
         */
-        return -1; 
+        // TODO: Look up the file's inode in file descriptor table
+        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE, Kernel.CWRITE, 0, args );
     }
 
     public static int seek( int fd, int offset, int whence ){
