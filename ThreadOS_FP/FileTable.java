@@ -91,4 +91,13 @@ public class FileTable {
     public synchronized boolean fempty() {
         return table.isEmpty();
     }
+
+    public synchronized FileTableEntry getFileTableEntry( int fd ){
+        int size = table.size();
+        for( int i = 0; i < size; i++ ){
+            FileTableEntry entry = (FileTableEntry)table.elementAt(i);
+            if( entry.iNumber == fd ) return entry;
+        }
+        return null;
+    }
 }
