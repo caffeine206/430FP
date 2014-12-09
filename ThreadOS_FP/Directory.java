@@ -15,18 +15,6 @@ public class Directory {
         root.getChars( 0, fsize[0], names[0], 0 ); // names[0] includes "/"
     }
 
-    // allocate the given file
-    public short ialloc(String filename) {
-        for (int i = 1; i < fsize.length; i++)) {
-            if (fsize[i] == 0) {
-                fsize[i] = Math.min(filename.length(), maxChars);
-                fileName.getChars(0, fsize[i], fnames[i], 0);
-                return (short)i;
-            }
-        }
-        return -1;
-    }
-
     // assumes data[] received directory information from disk
     // initializes the Directory instance with this data[]
     public void bytes2directory(byte data[]) {
@@ -37,9 +25,9 @@ public class Directory {
             i++;
         }
         // getting the filenames
-        for (int i = 0; i < fileNames.length; offset += maxChars * 2) {
+        for (int i = 0; i < names.length; offset += maxChars * 2) {
             String name = new String(data, offset, maxChars * 2);
-            name.getChars(0, fsize[i], fileNames[i], 0);
+            name.getChars(0, fsize[i], names[i], 0);
             i++;
         }
     }
@@ -57,15 +45,27 @@ public class Directory {
             i++;
         }
 
-        for (int i = 0; i < fileNames.length; offset += maxChars * 2) {
+        for (int i = 0; i < names.length; offset += maxChars * 2) {
             // get the file name
-            String name = new String(fileNames[i], 0, fsize[i]);
+            String name = new String(names[i], 0, fsize[i]);
             byte[] str_bytes = name.getBytes(); // converting the filename string to bytes
             // write to the directory array
             System.arraycopy(str_bytes, 0, newData, offset, str_bytes.length);
             i++;
         }
         return newData;
+    }
+
+    // allocate the given file
+    public short ialloc(String filename) {
+        for (int i = 1; i < fsize.length; i++) {
+            if (fsize[i] == 0) {
+                fsize[i] = Math.min(filename.length(), maxChars);
+                filename.getChars(0, fsize[i], names[i], 0);
+                return (short)i;
+            }
+        }
+        return -1;
     }
 
     // free up the given block
@@ -82,7 +82,7 @@ public class Directory {
     public short namei(String filename) {
         // loop over fsize array
         for (int i = 0; i < fsize.length; i++) {
-            String name = new String(fileNames[i], 0, fsize[i]);
+            String name = new String(names[i], 0, fsize[i]);
             // make sure the size matches and strings match
            if (fsize[i] == filename.length() && filename.equals(name)) {
                 // return the iNumber
