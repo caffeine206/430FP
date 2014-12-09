@@ -138,9 +138,50 @@ public class FileSystem {
         }
     }
 
-    public int seek(int fd, int offset, int whence) {
-        return -1;
-    }
+	// seek
+	// sets the seek pointer in the filetableentry
+	// returns -1 if no valid file table entry was passed
+	public int seek(FileTableEntry fte, int offset, int whence) {
+		//check for valid filetableEntry
+		if (fte == null) {
+			SysLib.cerr("invalid file table");
+			return -1;
+		}
+
+		// **Critical section
+		// if whence is set to 0 set seek pointer to offset
+		// else if whence is set to 1 set to current value plus offset
+		// else if whence is set to 2 set the pointer to the size of the file plus offset
+		synchronized (fte) {
+			if (whence == 0) {
+				if (offset >= 0 && offset <= fsize(fte)) {
+					fte.seekPtr = offset;
+				} else {
+					invalidOffset();
+					return -1;
+				}
+			} else if (whence == 1) {
+				if (fte.seekPtr + offset >= 0 && fte.seekPtr + offset <= fsize(fte)) {
+					fte.seekPtr += offset;
+				} else {
+					invalidOffset();
+					return -1;
+				}
+			} else if (whence == 2) {
+				if (fsize(fte) + offset >= 0 && fsize(fte) + offset <= fsize(fte)) {
+					fte.seekPtr = (fsize(fte) + offset);
+				} else {
+					invalidOffset();
+					return -1;
+				}
+			}
+			return fte.seekPtr;
+		}
+	}
+
+	public void invalidOffset(){
+		Syslib.cerr("invalid offset");
+	}
 
     public FileTableEntry open(String fileName, String mode) {
         FileTableEntry fte = filetable.falloc(fileName, mode);
@@ -172,18 +213,19 @@ public class FileSystem {
         return close(fte) && directory.ifree(fte.iNumber);
     }
 
-	// deallocallblocks
+	// deallocateAllblocks
 	//clears inode and frees blocks
-	private boolean deallocAllBlocks(FileTableEntry ftEnt) {
+	private boolean deallocAllBlocks(FileTableEntry fileTableEntry) {
 		// check valid inode and filetableentry
-		if (ftEnt.inode.count != 1 || ftEnt == null ) {
+		if (fileTableEntry.inode.count != 1 || fileTableEntry == null ) {
 			return false;
 		}
-		byte[] freedBlocks = ftEnt.inode.releaseIndirect(); // free indirect nodes
+		// release indirect Inode
+		byte[] releasedBlocks = fileTableEntry.inode.releaseIndirect();
 
 		// if not free release indirect blocks
-		if (freedBlocks != null) {
-			int num = SysLib.bytes2short(freedBlocks, 0);
+		if (releasedBlocks != null) {
+			int num = SysLib.bytes2short(releasedBlocks, 0);
 			while (num != -1) {
 				superblock.returnBlock(num);
 			}
@@ -192,13 +234,13 @@ public class FileSystem {
 		// release direct blocks
 		// if direct block exists, then release it and mark invalid
 		for (int i = 0; i < 11; i++)
-			if (ftEnt.inode.direct[i] != -1) {
-				superblock.returnBlock(ftEnt.inode.direct[i]);
-				ftEnt.inode.direct[i] = -1;
+			if (fileTableEntry.inode.direct[i] != -1) {
+				superblock.returnBlock(fileTableEntry.inode.direct[i]);
+				fileTableEntry.inode.direct[i] = -1;
 			}
 
 		//finally writeback Inode
-		ftEnt.inode.toDisk(ftEnt.iNumber);
+		fileTableEntry.inode.toDisk(fileTableEntry.iNumber);
 		return true;
 	}
 
