@@ -94,9 +94,9 @@ public class FileSystem {
         }
 
         synchronized (fte) {
-            int length = buffer.length;
+            int remainingBufferLength = buffer.length;
             int bufferIndex = 0;
-            while (length > 0) {
+            while (remainingBufferLength > 0) {
                 bufferIndex = fte.inode.findTargetBlock(fte.seekPtr);
                 if (bufferIndex == -1) {
                     short freeLocation = (short) superblock.getFreeBlock();
@@ -130,7 +130,7 @@ public class FileSystem {
                 // adjust pointer based on disk size
                 int newPtr = fte.seekPtr % Disk.blockSize;
                 int blockPlace = Disk.blockSize - newPtr;
-                int toWrite = Math.min(blockPlace, length);
+                int toWrite = Math.min(blockPlace, remainingBufferLength);
 
                 // copy the buffer into data
                 System.arraycopy(buffer, bufferIndex, data, newPtr, toWrite);
@@ -141,7 +141,7 @@ public class FileSystem {
                 // update values based on length of write
                 fte.seekPtr += toWrite;
                 bufferIndex += toWrite;
-                length -= toWrite;
+                remainingBufferLength -= toWrite;
 
                 // if fte's pointer is bigger than inode, then adjust the inode to match the pointer
                 if (fte.seekPtr > fte.inode.length) {
