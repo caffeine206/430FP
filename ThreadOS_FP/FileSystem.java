@@ -1,99 +1,180 @@
-public class FileSystem{
-	private SuperBlock superblock;
-	private Directory directory;
-	private FileTable filetable;
+public class FileSystem {
+    private SuperBlock superblock;
+    private Directory directory;
+    private FileTable filetable;
 
-	public FileSystem( int diskBlocks )
-	{
-		superblock = new SuperBlock( diskBlocks );
-		directory = new Directory( superblock.totalInodes );
-		filetable = new FileTable( directory );
+    public FileSystem(int diskBlocks) {
+        superblock = new SuperBlock(diskBlocks);
+        directory = new Directory(superblock.totalInodes);
+        filetable = new FileTable(directory);
 
-		// read the "/" file from disk	
-		FiletableEntry dirEnt = open( "/", "r" );
-		int dirSize = fsize( dirEnt );
-		if ( dirSize > 0 ){
-			byte[] dirData = new byte[dirSize];
-			read( dirEnt, dirData );
-			directory.bytes2directory( dirData )
-		}
-		close( dirEnt );
-	}	
+        // read the "/" file from disk
+        FileTableEntry fte = open("/", "r");
+        int dirSize = fsize(fte);
+        if (dirSize > 0) {
+            byte[] dirData = new byte[dirSize];
+            read(fte, dirData);
+            directory.bytes2directory(dirData)
+        }
+        close(fte);
+    }
 
-	// formats the disk, (i.e., Disk.java's data contents). 
-    // The parameter files specifies the maximum number of files to be created, 
-    // (i.e., the number of inodes to be allocated) in your file system. The return value is 0 on success, otherwise -1.	
-	public int format( int files ){
-		return -1; 
-	}
+    // formats the disk, (i.e., Disk.java's data contents).
+    // The parameter files specifies the maximum number of files to be created,
+    // (i.e., the number of inodes to be allocated) in your file system. The return value is 0 on success, otherwise -1.
+    public int format(int files) {
+        return -1;
+    }
 
-	public int open( String fileName, String mode ){
-		return -1;
-	}
-
-	// reads up to buffer.length bytes from the file indicated by fd, starting at the position currently pointed to by the seek pointer.
+    // reads up to buffer.length bytes from the file indicated by fd, starting at the position currently pointed to by the seek pointer.
     // If bytes remaining between the current seek pointer and the end of file are less than buffer.length, SysLib.read reads as many bytes as possible,
     // putting them into the beginning of buffer. It increments the seek pointer by the number of bytes to have been read.
     // The return value is the number of bytes that have been read, or a negative value upon an error.
-	public int read( FiletableEntry file, byte buffer[] ){
-		// the file's mode must allow reading
-		if (file == null || file.mode == "a" || file.mode == "w") {
+    public int read(FileTableEntry fte, byte buffer[]) {
+        // the file's mode must allow reading
+        if (fte == null || fte.mode == "a" || fte.mode == "w") {
             return -1;
         }
-		int remainingBufferLength = buffer.length;
-		int bufferIndex = 0; 		// current index in the buffer. also indicates how many bytes have been read so far.			
-		int fileSize = fsize( file );
-		synchronized ( file ){
-			// while loop to continue reading until we are finished reading from the starting position of the file's seekPtr to the end of the file,
-			// or until the buffer is full.
-			while ( remainingBufferLength > 0 && file.seekPtr < fileSize ) {
-				// the file's seek pointer points to a byte, so we find the block number
-				// using findBlockNumber
-				int blockNumber = file.inode.findBlockNumber( file.seekPtr );
-				if (blockNumber == -1) {	// if the blockNumber is -1, that means the seekPtr has left valid block space and there cannot be any more bytes to read.
-       	            return bufferIndex;
-            	}
-            	// read data from the current block into a byte buffer
-                byte[] blockData = new byte[ Disk.blockSize ];
-                SysLib.rawread( blockNumber, blockData );
-         		// find the offset to start reading from
-                int offset = file.seekPtr % Disk.blockSize;
+        int location = 0;
+        int remainingBufferLength = buffer.length;
+        int bufferIndex = 0;        // current index in the buffer. also indicates how many bytes have been read so far.
+        int fileSize = fsize(fte);
+        synchronized (fte) {
+            // while loop to continue reading until we are finished reading from the starting position of the file's seekPtr to the end of the file,
+            // or until the buffer is full.
+            while (remainingBufferLength > 0 && fte.seekPtr < fileSize) {
+                // the file's seek pointer points to a byte, so we find the block number
+                // using findBlockNumber
+                int blockNumber = fte.inode.findBlockNumber(fte.seekPtr);
+                if (blockNumber == -1) {    // if the blockNumber is -1, that means the seekPtr has left valid block space and there cannot be any more bytes to read.
+                    return bufferIndex;
+                }
+                // read data from the current block into a byte buffer
+                byte[] blockData = new byte[Disk.blockSize];
+                SysLib.rawread(blockNumber, blockData);
+                // find the offset to start reading from
+                int offset = fte.seekPtr % Disk.blockSize;
                 // find number of bytes to read in the current block
-                int blockReadLength = Disk.blockSize - offset
+                int blockReadLength = Disk.blockSize - offset;
                 // find number of bytes to read based on the size of the file and its current seekPtr position
-                int fileReadLength = fsize( file ) - file.seekPtr;
+                int fileReadLength = fileSize - fte.seekPtr;
                 // if the buffer is too small to read the segment of the block from offset to the end or the rest of the file, then the buffer's size is the number of bytes read.
                 // otherwise, the number of bytes read is based on whichever is smaller between blockReadLength and fileReadLength.
-                int readLength = Math.min( Math.min( blockReadLength, fileReadLength ), remainingBufferLength);
-                // call arraycopy to 
-                System.arraycopy( blockData, offset, buffer, location, finalReadLength );	//  TODO: change location
-                
+                int readLength = Math.min(Math.min(blockReadLength, remainingBufferLength), fileReadLength);
+                // call arraycopy to
+                System.arraycopy(blockData, offset, buffer, location, readLength);    //  TODO: change location
+
                 // adjust the values of the file's seekPtr, the remaining buffer length, and the current buffer index based on the read that has just occurred.
-                remainingBufferLength -= readLength;     
-                file.seekPtr += readLength;
+                remainingBufferLength -= readLength;
+                fte.seekPtr += readLength;
                 bufferIndex += readLength;
-			}
-			return bufferIndex;
-		}
-	}
+            }
+            return bufferIndex;
+        }
+    }
 
-	public int write( int fd, byte buffer[] ){
-		return -1; 
-	}
+    public int write(FileTableEntry fte, byte buffer[]) {
+        if (fte == null || fte.mode == "a" || fte.mode == "r") {
+            return -1;
+        }
 
-	public int seek( int fd, int offset, int whence ){
-		return -1; 
-	}
+        synchronized (fte) {
+            int length = buffer.length;
+            int location = 0;
+            while (length > 0) {
+                location = fte.inode.findTargetBlock(fte.seekPtr);
+                if (location == -1) {
+                    short freeLocation = (short) superblock.getFreeBlock();
+                    int status = fte.inode.submitBlock(fte.seekPtr, freeLocation);
+                    if (status == -1) { // block is in use
+                        SysLib.cerr("Filesystem error on write\n");
+                        return -1;
+                    } else if (status == 1) { // indirect is empty, have to find new block
+                        short newLocation = (short) this.superblock.getFreeBlock();
+                        // attempt to set index block to the new location
+                        if (!fte.inode.setIndexBlock(newLocation)) {
+                            SysLib.cerr("ThreadOS: panic on write\n");
+                            return -1;
+                        }
+                        // attempt to submit the original location again
+                        if (fte.inode.submitBlock(fte.seekPtr, freeLocation) != 0) {
+                            SysLib.cerr("ThreadOS: panic on write\n");
+                            return -1;
+                        }
+                    } else { // block was valid
+                        // do nothing
+                    }
+                    location = freeLocation;
+                }
+                byte[] data = new byte[Disk.blockSize];
 
-	public int close( int fd ){
-		return -1;
-	}
+                // attempt to read at the location
+                if (SysLib.rawread(location, data) == -1) {
+                    System.exit(2);
+                }
+                // adjust pointer based on disk size
+                int newPtr = fte.seekPtr % Disk.blockSize;
+                int blockPlace = Disk.blockSize - newPtr;
+                int toWrite = Math.min(blockPlace, length);
 
-	public int delete( String fileName ){
-		return -1;
-	}
+                // copy the buffer into data
+                System.arraycopy(buffer, location, data, newPtr, toWrite);
 
-	public int fsize( int fd ){
-		return -1;
-	}
+                // write to disk
+                SysLib.rawwrite(location, data);
+
+                // update values based on length of write
+                fte.seekPtr += toWrite;
+                location += toWrite;
+                length -= toWrite;
+
+                // if fte's pointer is bigger than inode, then adjust the inode to match the pointer
+                if (fte.seekPtr > fte.inode.length) {
+                    fte.inode.length = fte.seekPtr;
+                }
+            }
+            fte.inode.toDisk(fte.iNumber);
+            return location;
+        }
+    }
+
+    public int seek(int fd, int offset, int whence) {
+        return -1;
+    }
+
+    public FileTableEntry open(String fileName, String mode) {
+        FileTableEntry fte = filetable.falloc(fileName, mode);
+        if (mode == "w" && !deallocAllBlocks(fte)) { // no place to write
+            return null;
+        }
+        return fte;
+    }
+
+
+    public boolean close(FileTableEntry fte) {
+        if (fte == null)
+            return false;
+        synchronized (fte) {
+            fte.count--;
+            if (fte.count > 0) {
+                return true;
+            }
+        }
+        return filetable.ffree(fte);
+    }
+
+    public boolean delete(String fileName) {
+        FileTableEntry fte = open(fileName, "w");
+        // if there is no file then return false
+        if (fte == null) {
+            return false;
+        }
+        return close(fte) && directory.ifree(fte.iNumber);
+    }
+
+    public int fsize(FileTableEntry fte) {
+        synchronized (fte) {
+            return fte.inode.length;
+        }
+    }
 }

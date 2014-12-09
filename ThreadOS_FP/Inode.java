@@ -152,7 +152,7 @@ public class Inode {
         SysLib.rawwrite(this.indirect, data);
         return 0;
     }
-    
+
     // takes a byte index and returns the data from that block
     public int findBlockNumber( int byteNumber ) {
         // each block contains 512 bytes, so we find the block number by dividing the byteNumber by 512.
