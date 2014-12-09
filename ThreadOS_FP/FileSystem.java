@@ -95,10 +95,10 @@ public class FileSystem {
 
         synchronized (fte) {
             int length = buffer.length;
-            int location = 0;
+            int bufferIndex = 0;
             while (length > 0) {
-                location = fte.inode.findTargetBlock(fte.seekPtr);
-                if (location == -1) {
+                bufferIndex = fte.inode.findTargetBlock(fte.seekPtr);
+                if (bufferIndex == -1) {
                     short freeLocation = (short) superblock.getFreeBlock();
                     int status = fte.inode.submitBlock(fte.seekPtr, freeLocation);
                     if (status == -1) { // block is in use
@@ -119,12 +119,12 @@ public class FileSystem {
                     } else { // block was valid
                         // do nothing
                     }
-                    location = freeLocation;
+                    bufferIndex = freeLocation;
                 }
                 byte[] data = new byte[Disk.blockSize];
 
                 // attempt to read at the location
-                if (SysLib.rawread(location, data) == -1) {
+                if (SysLib.rawread(bufferIndex, data) == -1) {
                     System.exit(2);
                 }
                 // adjust pointer based on disk size
@@ -133,14 +133,14 @@ public class FileSystem {
                 int toWrite = Math.min(blockPlace, length);
 
                 // copy the buffer into data
-                System.arraycopy(buffer, location, data, newPtr, toWrite);
+                System.arraycopy(buffer, bufferIndex, data, newPtr, toWrite);
 
                 // write to disk
-                SysLib.rawwrite(location, data);
+                SysLib.rawwrite(bufferIndex, data);
 
                 // update values based on length of write
                 fte.seekPtr += toWrite;
-                location += toWrite;
+                bufferIndex += toWrite;
                 length -= toWrite;
 
                 // if fte's pointer is bigger than inode, then adjust the inode to match the pointer
@@ -149,7 +149,7 @@ public class FileSystem {
                 }
             }
             fte.inode.toDisk(fte.iNumber);
-            return location;
+            return bufferIndex;
         }
     }
 
