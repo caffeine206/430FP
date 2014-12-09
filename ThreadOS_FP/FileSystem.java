@@ -14,7 +14,7 @@ public class FileSystem {
         if (dirSize > 0) {
             byte[] dirData = new byte[dirSize];
             read(fte, dirData);
-            directory.bytes2directory(dirData)
+            directory.bytes2directory(dirData);
         }
         close(fte);
     }
