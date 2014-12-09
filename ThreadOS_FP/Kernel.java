@@ -186,8 +186,7 @@ public class Kernel
 
                case CREAD:   // to be implemented in assignment 4
                   return cache.read( param, ( byte[] )args ) ? OK : ERROR;
-               case CREAD:
-                  return cache.read( param, ( byte[] )args ) ? OK : ERROR;
+
 
                case CWRITE:  // to be implemented in assignment 4
                   return cache.write( param, ( byte[] )args ) ? OK : ERROR;
@@ -229,7 +228,7 @@ public class Kernel
                   } 
                   return ERROR;
                case FORMAT:  // to be implemented in project
-                  return ( fs.format( param ) == true ) ? OK : ERROR;
+                  return ( fs.format( param ) == 0 ) ? OK : ERROR;
                case DELETE:  // to be implemented in project
                   return ( fs.delete( (String)args ) == true ) ? OK : ERROR;
             }
