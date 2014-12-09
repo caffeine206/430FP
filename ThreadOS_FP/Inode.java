@@ -136,11 +136,11 @@ public class Inode {
         if (indirect < 0) {
             return 1;
         } else {
-            return writeBlock(seekPtr, block, location);
+            return writeBlock(block, location);
         }
     }
 
-    private int writeBlock(int seekPtr, short block, int location) {
+    private int writeBlock(short block, int location) {
         byte[] data = new byte[Disk.blockSize];
         SysLib.rawread(this.indirect, data);
         location = (location - directSize) * 2;
