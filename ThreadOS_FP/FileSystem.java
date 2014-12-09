@@ -89,25 +89,28 @@ public class FileSystem {
     }
 
     public int write(FileTableEntry fte, byte buffer[]) {
-        if (fte == null || fte.mode == "a" || fte.mode == "r") {
+    	int bufferIndex = 0;
+        if (fte == null || fte.mode == "r") {
             return -1;
         }
 
         synchronized (fte) {
             int remainingBufferLength = buffer.length;
-            int bufferIndex = 0;
+            
             while (remainingBufferLength > 0) {
-                bufferIndex = fte.inode.findTargetBlock(fte.seekPtr);
-                if (bufferIndex == -1) {
+                //bufferIndex = fte.inode.findTargetBlock(fte.seekPtr);
+                int blockNumber = fte.inode.findBlockNumber(fte.seekPtr);
+                if (blockNumber == -1) {
                     short freeLocation = (short) superblock.getFreeBlock();
                     int status = fte.inode.submitBlock(fte.seekPtr, freeLocation);
-                    if (status == -1) { // block is in use
+                    if (status == 1) { // block is in use
                         SysLib.cerr("Filesystem error on write\n");
                         return -1;
-                    } else if (status == 1) { // indirect is empty, have to find new block
-                        short newLocation = (short) this.superblock.getFreeBlock();
+                    }
+                    if (status == 2) { // indirect is empty, have to find new block
+                        freeLocation = (short) this.superblock.getFreeBlock();
                         // attempt to set index block to the new location
-                        if (!fte.inode.setIndexBlock(newLocation)) {
+                        if (!fte.inode.setIndexBlock(freeLocation)) {
                             SysLib.cerr("ThreadOS: panic on write\n");
                             return -1;
                         }
@@ -116,11 +119,10 @@ public class FileSystem {
                             SysLib.cerr("ThreadOS: panic on write\n");
                             return -1;
                         }
-                    } else { // block was valid
-                        // do nothing
                     }
-                    bufferIndex = freeLocation;
+                    blockNuber = freeLocation;
                 }
+
                 byte[] data = new byte[Disk.blockSize];
 
                 // attempt to read at the location
