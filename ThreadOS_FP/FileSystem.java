@@ -19,6 +19,16 @@ public class FileSystem {
         close(fte);
     }
 
+    public void sync() {
+        // open root directory
+        FileTableEntry fte = open("/", "w");
+        byte[] data = directory.directory2bytes();
+        // write and then close
+        write(fte, data);
+        close(fte);
+        superblock.sync();
+    }
+
     // formats the disk, (i.e., Disk.java's data contents).
     // The parameter files specifies the maximum number of files to be created,
     // (i.e., the number of inodes to be allocated) in your file system. The return value is 0 on success, otherwise -1.
