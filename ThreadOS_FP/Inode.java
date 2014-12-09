@@ -168,4 +168,17 @@ public class Inode {
         int offset = ( blockNumber - directSize ) * 2;
         return ( int ) SysLib.bytes2short( data, offset );
     }
+
+    //release the indirect and return the data
+    public byte[] releaseIndirect(){
+        // if indirect is valid,read the raw data, set to free and then return data
+        if (indirect >= 0) {
+            byte[] data = new byte[Disk.blockSize];
+            SysLib.rawread(indirect, data);
+            indirect = -1;
+            return data;
+        }
+        // else return null
+        return null;
+    }
 }

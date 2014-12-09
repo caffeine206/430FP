@@ -172,6 +172,36 @@ public class FileSystem {
         return close(fte) && directory.ifree(fte.iNumber);
     }
 
+	// deallocallblocks
+	//clears inode and frees blocks
+	private boolean deallocAllBlocks(FileTableEntry ftEnt) {
+		// check valid inode and filetableentry
+		if (ftEnt.inode.count != 1 || ftEnt == null ) {
+			return false;
+		}
+		byte[] freedBlocks = ftEnt.inode.releaseIndirect(); // free indirect nodes
+
+		// if not free release indirect blocks
+		if (freedBlocks != null) {
+			int num = SysLib.bytes2short(freedBlocks, 0);
+			while (num != -1) {
+				superblock.returnBlock(num);
+			}
+		}
+
+		// release direct blocks
+		// if direct block exists, then release it and mark invalid
+		for (int i = 0; i < 11; i++)
+			if (ftEnt.inode.direct[i] != -1) {
+				superblock.returnBlock(ftEnt.inode.direct[i]);
+				ftEnt.inode.direct[i] = -1;
+			}
+
+		//finally writeback Inode
+		ftEnt.inode.toDisk(ftEnt.iNumber);
+		return true;
+	}
+
     public int fsize(FileTableEntry fte) {
         synchronized (fte) {
             return fte.inode.length;
