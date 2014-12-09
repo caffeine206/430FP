@@ -120,7 +120,7 @@ public class FileSystem {
                             return -1;
                         }
                     }
-                    blockNuber = freeLocation;
+                    blockNumber = freeLocation;
                 }
 
                 byte[] data = new byte[Disk.blockSize];
