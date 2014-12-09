@@ -4,14 +4,10 @@
 public class Inode {
     public static final int iNodeSize = 32;
     public static final int directSize = 11;
-    public static final int NoError = 0;
-    public static final int ErrorBlockRegistered = -1;
-    public static final int ErrorPrecBlockUnused = -2;
-    public static final int ErrorIndirectNull = -3;
     public int length;
     public short count;
     public short flag;
-    public short[] direct = new short[11];
+    public short[] direct = new short[directSize];
     public short indirect;
 
     public Inode(short iNumber) {
@@ -27,19 +23,18 @@ public class Inode {
         flag = SysLib.bytes2short(data, offset);
         offset += 2;
 
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < directSize; i++) {
             direct[i] = SysLib.bytes2short(data, offset);
             offset += 2;
         }
         indirect = SysLib.bytes2short(data, offset);
-        offset += 2;
     }
 
     public Inode() {
         length = 0;
         count = 0;
         flag = 0;
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < directSize; i++) {
             direct[i] = -1;
         }
         indirect = -1;
@@ -69,52 +64,26 @@ public class Inode {
         }
         // get final indirect
         SysLib.short2bytes(indirect, data, offset);
-        offset += 2;
 
-        // get data
+        // read new data
         int block = 1 + iNumber / 16;
-        byte[] data = new byte[Disk.blockSize];
-        SysLib.rawread(block, data);
+        byte[] newData = new byte[Disk.blockSize];
+        SysLib.rawread(block, newData);
         offset = iNumber % 16 * iNodeSize;
 
-        // copy the data
-        System.arraycopy(data, 0, data, offset, iNodeSize);
-        // writeback
-        SysLib.rawwrite(block, data);
+        // copy the new data
+        System.arraycopy(data, 0, newData, offset, iNodeSize);
+        // write back new data
+        SysLib.rawwrite(block, newData);
 
     }
 
     public short getIndexBlockNumber() {
         return indirect;
     }
-//
-//        // Check inumber or blockset
-//        public boolean checkIfBlockSet(short iNumber) {
-//            // if any blocks are invalid
-//            for (int i = 0; i < directSize; i++) {
-//                if (direct[i] == -1) {
-//                    return false;
-//                }
-//            }
-//            // if indirect is -1 then we need to set the block
-//            if (indirect != -1)
-//                return false;
-//            indirect = iNumber;
-//            byte[] data = new byte[Disk.blockSize];
-//
-//            // convert to bytes
-//            for (int j = 0; j < Disk.blockSize / 2; j++) {
-//                SysLib.short2bytes((short)-1, data, j * 2);
-//            }
-//
-//            // writeback raw data
-//            SysLib.rawwrite(iNumber, data);
-//            return true;
-//        }
-//    }
 
     public boolean setIndexBlock(short indexBlockNumber) {
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < directSize; i++) {
             if (direct[i] == -1) {
                 return false;
             }
@@ -140,7 +109,7 @@ public class Inode {
 
         if (indirect < 0) { // don't scan if indirect is not set
             return -1;
-        } else if (block >= 11) { // scan the index block
+        } else if (block >= directSize) { // scan the index block
             byte[] data = new byte[Disk.blockSize];
             SysLib.rawread(indirect, data);
             int off = (block - directSize) * 2;
@@ -148,5 +117,39 @@ public class Inode {
         } else { // return pointer
             return direct[block];
         }
+    }
+
+    // attempts to write the given block and returns a code to represent the result of the attempt
+    // -1 = in use, 0 = fine to write, 1 = indirect is empty
+    public int submitBlock(int seekPtr, short block) {
+        int location = seekPtr / Disk.blockSize;
+        if (location < directSize) {
+            if (direct[location] >= 0) {
+                return -1;
+            } else if (location > 0 && direct[location - 1] == -1) {
+                return 0;
+            } else {
+                direct[location] = block;
+                return 0;
+            }
+        }
+        if (indirect < 0) {
+            return 1;
+        } else {
+            return writeBlock(seekPtr, block, location);
+        }
+    }
+
+    private int writeBlock(int seekPtr, short block, int location) {
+        byte[] data = new byte[Disk.blockSize];
+        SysLib.rawread(this.indirect, data);
+        location = (location - directSize) * 2;
+        if (SysLib.bytes2short(data, location) > 0) {
+            return -1;
+        }
+        SysLib.short2bytes(block, data, location);
+
+        SysLib.rawwrite(this.indirect, data);
+        return 0;
     }
 }
