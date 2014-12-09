@@ -255,8 +255,11 @@ public class FileSystem {
 	}
 
     public int fsize(FileTableEntry fte) {
-        synchronized (fte) {
-            return fte.inode.length;
+        if (fte != null) {
+            synchronized (fte) {
+                return fte.inode.length;
+            }
         }
+        return -1;
     }
 }
