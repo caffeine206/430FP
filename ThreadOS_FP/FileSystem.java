@@ -180,7 +180,7 @@ public class FileSystem {
 	}
 
 	public void invalidOffset(){
-		Syslib.cerr("invalid offset");
+		SysLib.cerr("invalid offset");
 	}
 
     public FileTableEntry open(String fileName, String mode) {
