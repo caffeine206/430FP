@@ -152,4 +152,20 @@ public class Inode {
         SysLib.rawwrite(this.indirect, data);
         return 0;
     }
+    
+    // takes a byte index and returns the data from that block
+    public int findBlockNumber( int byteNumber ) {
+        // each block contains 512 bytes, so we find the block number by dividing the byteNumber by 512.
+        int blockNumber = byteNumber / Disk.blockSize;
+        if ( blockNumber < directSize ) {
+            return direct[blockNumber];
+        }
+        if (indirect < 0) {
+            return -1;
+        }
+        byte[] data = new byte[ Disk.blockSize ];
+        SysLib.rawread( indirect, data );
+        int offset = ( blockNumber - directSize ) * 2;
+        return ( int ) SysLib.bytes2short( data, offset );
+    }
 }

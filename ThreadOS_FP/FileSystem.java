@@ -35,15 +35,46 @@ public class FileSystem{
     // If bytes remaining between the current seek pointer and the end of file are less than buffer.length, SysLib.read reads as many bytes as possible,
     // putting them into the beginning of buffer. It increments the seek pointer by the number of bytes to have been read.
     // The return value is the number of bytes that have been read, or a negative value upon an error.
-	public int read( int fd, byte buffer[] ){
-		int size = buffer.length;
-		FiletableEntry file = filetable.getFileTableEntry( fd );
-		int start = file.seekPtr;
-		for ( int i = start; i < size; i++ ){
-			// TODO: read bytes from file's associated inode into the buffer, possibly using the inode's direct[]
+	public int read( FiletableEntry file, byte buffer[] ){
+		// the file's mode must allow reading
+		if (file == null || file.mode == "a" || file.mode == "w") {
+            return -1;
+        }
+		int remainingBufferLength = buffer.length;
+		int bufferIndex = 0; 		// current index in the buffer. also indicates how many bytes have been read so far.			
+		int fileSize = fsize( file );
+		synchronized ( file ){
+			// while loop to continue reading until we are finished reading from the starting position of the file's seekPtr to the end of the file,
+			// or until the buffer is full.
+			while ( remainingBufferLength > 0 && file.seekPtr < fileSize ) {
+				// the file's seek pointer points to a byte, so we find the block number
+				// using findBlockNumber
+				int blockNumber = file.inode.findBlockNumber( file.seekPtr );
+				if (blockNumber == -1) {	// if the blockNumber is -1, that means the seekPtr has left valid block space and there cannot be any more bytes to read.
+       	            return bufferIndex;
+            	}
+            	// read data from the current block into a byte buffer
+                byte[] blockData = new byte[ Disk.blockSize ];
+                SysLib.rawread( blockNumber, blockData );
+         		// find the offset to start reading from
+                int offset = file.seekPtr % Disk.blockSize;
+                // find number of bytes to read in the current block
+                int blockReadLength = Disk.blockSize - offset
+                // find number of bytes to read based on the size of the file and its current seekPtr position
+                int fileReadLength = fsize( file ) - file.seekPtr;
+                // if the buffer is too small to read the segment of the block from offset to the end or the rest of the file, then the buffer's size is the number of bytes read.
+                // otherwise, the number of bytes read is based on whichever is smaller between blockReadLength and fileReadLength.
+                int readLength = Math.min( Math.min( blockReadLength, fileReadLength ), remainingBufferLength);
+                // call arraycopy to 
+                System.arraycopy( blockData, offset, buffer, location, finalReadLength );	//  TODO: change location
+                
+                // adjust the values of the file's seekPtr, the remaining buffer length, and the current buffer index based on the read that has just occurred.
+                remainingBufferLength -= readLength;     
+                file.seekPtr += readLength;
+                bufferIndex += readLength;
+			}
+			return bufferIndex;
 		}
-		//TODO
-		return -1; //TEMP
 	}
 
 	public int write( int fd, byte buffer[] ){
