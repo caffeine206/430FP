@@ -228,7 +228,7 @@ public class Kernel
                   } 
                   return ERROR;
                case FORMAT:  // to be implemented in project
-                  return ( fs.format( param ) == 0 ) ? OK : ERROR;
+                  return ( fs.format( param ) == true ) ? OK : ERROR;
                case DELETE:  // to be implemented in project
                   return ( fs.delete( (String)args ) == true ) ? OK : ERROR;
             }
