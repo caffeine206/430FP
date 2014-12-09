@@ -50,8 +50,8 @@ public class FileSystem{
 				// the file's seek pointer points to a byte, so we find the block number
 				// using findBlockNumber
 				int blockNumber = file.inode.findBlockNumber( file.seekPtr );
-				if (blockNumber == -1) {
-       	            return -1;
+				if (blockNumber == -1) {	// if the blockNumber is -1, that means the seekPtr has left valid block space and there cannot be any more bytes to read.
+       	            return bufferIndex;
             	}
             	// read data from the current block into a byte buffer
                 byte[] blockData = new byte[ Disk.blockSize ];
