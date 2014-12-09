@@ -3,20 +3,16 @@ public class Directory {
 
     // Directory entries
     private int fsize[];        // each element stores a different file size.
-    private char fnames[][];    // each element stores a different file name.
+    private char names[][];    // each element stores a different file name.
 
     public Directory( int maxInumber ) { // directory constructor
-        fsizes = new int[maxInumber];     // maxInumber = max files
+        fsize = new int[maxInumber];     // maxInumber = max files
         for ( int i = 0; i < maxInumber; i++ )
             fsize[i] = 0;                 // all file size initialized to 0
-        fnames = new char[maxInumber][maxChars];
+        names = new char[maxInumber][maxChars];
         String root = "/";                // entry(inode) 0 is "/"
         fsize[0] = root.length( );        // fsize[0] is the size of "/".
-        root.getChars( 0, fsizes[0], fnames[0], 0 ); // fnames[0] includes "/"
-    }
-
-    public short ialloc(String filename) {
-        return 1;
+        root.getChars( 0, fsize[0], names[0], 0 ); // names[0] includes "/"
     }
 
     // assumes data[] received directory information from disk
@@ -24,14 +20,14 @@ public class Directory {
     public void bytes2directory(byte data[]) {
         int offset = 0;
         // getting the filesizes from the data
-        for (int i = 0; i < fileSize.length; offset += 4) {
-            fileSize[i] = SysLib.bytes2int(data, offset);
+        for (int i = 0; i < fsize.length; offset += 4) {
+            fsize[i] = SysLib.bytes2int(data, offset);
             i++;
         }
         // getting the filenames
-        for (int i = 0; i < fileNames.length; offset += maxChars * 2) {
-            String fname = new String(data, offset, maxChars * 2);
-            fname.getChars(0, fileSize[i], fileNames[i], 0);
+        for (int i = 0; i < names.length; offset += maxChars * 2) {
+            String name = new String(data, offset, maxChars * 2);
+            name.getChars(0, fsize[i], names[i], 0);
             i++;
         }
     }
@@ -42,17 +38,17 @@ public class Directory {
     // into bytes.
     public byte[] directory2bytes() {
         // create the new
-        byte[] newData = new byte[(4 * fileSize.length) + (fileSize.length * maxChars * 2)];
+        byte[] newData = new byte[(4 * fsize.length) + (fsize.length * maxChars * 2)];
         int offset = 0;
-        for (int i = 0; i < fileSize.length; offset += 4) {
-            SysLib.int2bytes(fileSize[i], newData, offset);
+        for (int i = 0; i < fsize.length; offset += 4) {
+            SysLib.int2bytes(fsize[i], newData, offset);
             i++;
         }
 
-        for (int i = 0; i < fileNames.length; offset += maxChars * 2) {
+        for (int i = 0; i < names.length; offset += maxChars * 2) {
             // get the file name
-            String fname = new String(fileNames[i], 0, fileSize[i]);
-            byte[] str_bytes = fname.getBytes(); // converting the filename string to bytes
+            String name = new String(names[i], 0, fsize[i]);
+            byte[] str_bytes = name.getBytes(); // converting the filename string to bytes
             // write to the directory array
             System.arraycopy(str_bytes, 0, newData, offset, str_bytes.length);
             i++;
@@ -60,18 +56,39 @@ public class Directory {
         return newData;
     }
 
-    public boolean ifree(short iNumber) {
-        if (iNumber == 1) {
-            return true;
+    // allocate the given file
+    public short ialloc(String filename) {
+        for (int i = 1; i < fsize.length; i++) {
+            if (fsize[i] == 0) {
+                fsize[i] = Math.min(filename.length(), maxChars);
+                filename.getChars(0, fsize[i], names[i], 0);
+                return (short)i;
+            }
         }
-        return false;
+        return -1;
     }
 
-    public short namei(String filename) {
-        if (filename.equals("/")) {
-            return 0;
+    // free up the given block
+    public boolean ifree(short iNumber) {
+        if (fsize[iNumber] > 0) {
+            fsize[iNumber] = 0;
+            return true;
         } else {
-            return -1;
+            return false;
         }
+    }
+
+    // names the given file
+    public short namei(String filename) {
+        // loop over fsize array
+        for (int i = 0; i < fsize.length; i++) {
+            String name = new String(names[i], 0, fsize[i]);
+            // make sure the size matches and strings match
+           if (fsize[i] == filename.length() && filename.equals(name)) {
+                // return the iNumber
+                return (short)i;
+            }
+        }
+        return -1;
     }
 }
