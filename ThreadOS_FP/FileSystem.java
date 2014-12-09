@@ -32,8 +32,14 @@ public class FileSystem {
     // formats the disk, (i.e., Disk.java's data contents).
     // The parameter files specifies the maximum number of files to be created,
     // (i.e., the number of inodes to be allocated) in your file system. The return value is 0 on success, otherwise -1.
-    public int format(int files) {
-        return -1;
+    public boolean format(int files) {
+        while (!filetable.fempty()) { // wait for the file table to empty
+        }
+        // format and then update directory / file table
+        superblock.format(files);
+        directory = new Directory(superblock.totalInodes);
+        filetable = new FileTable(directory);
+        return true;
     }
 
     // reads up to buffer.length bytes from the file indicated by fd, starting at the position currently pointed to by the seek pointer.
