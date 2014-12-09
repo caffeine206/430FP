@@ -45,7 +45,6 @@ public class FileSystem {
         if (fte == null || fte.mode == "a" || fte.mode == "w") {
             return -1;
         }
-        int location = 0;
         int remainingBufferLength = buffer.length;
         int bufferIndex = 0;        // current index in the buffer. also indicates how many bytes have been read so far.
         int fileSize = fsize(fte);
@@ -71,8 +70,8 @@ public class FileSystem {
                 // if the buffer is too small to read the segment of the block from offset to the end or the rest of the file, then the buffer's size is the number of bytes read.
                 // otherwise, the number of bytes read is based on whichever is smaller between blockReadLength and fileReadLength.
                 int readLength = Math.min(Math.min(blockReadLength, remainingBufferLength), fileReadLength);
-                // call arraycopy to
-                System.arraycopy(blockData, offset, buffer, location, readLength);    //  TODO: change location
+                // call arraycopy to transfer the appropriate data from blockData to the buffer.
+                System.arraycopy(blockData, offset, buffer, bufferIndex, readLength);    
 
                 // adjust the values of the file's seekPtr, the remaining buffer length, and the current buffer index based on the read that has just occurred.
                 remainingBufferLength -= readLength;
