@@ -99,7 +99,6 @@ public class FileSystem {
             int remainingBufferLength = buffer.length;
             
             while (remainingBufferLength > 0) {
-                //bufferIndex = fte.inode.findTargetBlock(fte.seekPtr);
                 int blockNumber = fte.inode.findBlockNumber(fte.seekPtr);
                 if (blockNumber == -1) {
                     short freeLocation = (short) superblock.getFreeBlock();
@@ -124,22 +123,7 @@ public class FileSystem {
                     blockNumber = freeLocation;
                 }
 
-                byte[] data = new byte[Disk.blockSize];
-
-                // attempt to read at the location
-                if (SysLib.rawread(bufferIndex, data) == -1) {
-                    System.exit(2);
-                }
-                // adjust pointer based on disk size
-                int newPtr = fte.seekPtr % Disk.blockSize;
-                int blockPlace = Disk.blockSize - newPtr;
-                int toWrite = Math.min(blockPlace, remainingBufferLength);
-
-                // copy the buffer into data
-                System.arraycopy(buffer, bufferIndex, data, newPtr, toWrite);
-
-                // write to disk
-                SysLib.rawwrite(bufferIndex, data);
+                int toWrite = updateAndWrite(bufferIndex, fte, buffer, remainingBufferLength);
 
                 // update values based on length of write
                 fte.seekPtr += toWrite;
@@ -154,6 +138,25 @@ public class FileSystem {
             fte.inode.toDisk(fte.iNumber);
             return bufferIndex;
         }
+    }
+
+    private int updateAndWrite(int bufferIndex, FileTableEntry fte, byte buffer[], int remainingBufferLength) {
+        byte[] data = new byte[Disk.blockSize];
+        // attempt to read at the location
+        if (SysLib.rawread(bufferIndex, data) == -1) {
+            System.exit(2);
+        }
+        // adjust pointer based on disk size
+        int newPtr = fte.seekPtr % Disk.blockSize;
+        int blockPlace = Disk.blockSize - newPtr;
+        int toWrite = Math.min(blockPlace, remainingBufferLength);
+
+        // copy the buffer into data
+        System.arraycopy(buffer, bufferIndex, data, newPtr, toWrite);
+
+        // write to disk
+        SysLib.rawwrite(bufferIndex, data);
+        return toWrite;
     }
 
 	// seek
