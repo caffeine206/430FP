@@ -77,86 +77,111 @@ public class FileSystem {
                 // otherwise, the number of bytes read is based on whichever is smaller between blockReadLength and fileReadLength.
                 int readLength = Math.min(Math.min(blockReadLength, remainingBufferLength), fileReadLength);
                 // call arraycopy to transfer the appropriate data from blockData to the buffer.
-                System.arraycopy(blockData, offset, buffer, bufferIndex, readLength);    
+                System.arraycopy(blockData, offset, buffer, bufferIndex, readLength);
 
                 // adjust the values of the file's seekPtr, the remaining buffer length, and the current buffer index based on the read that has just occurred.
                 remainingBufferLength -= readLength;
                 fte.seekPtr += readLength;
                 bufferIndex += readLength;
             }
-            if (bufferIndex == -1) return -5;
+//            System.out.println();
+//            System.out.print("READ BUFFER: ");
+//            for (int i = 0; i < buffer.length; i++)
+//                System.out.print(buffer[i] + " ");
+//            System.out.println();
             return bufferIndex;
         }
     }
 
-    public int write(FileTableEntry fte, byte buffer[]) {
-    	int bufferIndex = 0;
+    public int write(FileTableEntry fte, byte[] buffer) {
+        int location = 0;
+
+        // not given a valid file table entry or we are suppose to
+        // read instead of write
         if (fte == null || fte.mode == "r") {
             return -1;
         }
-
+        // go into critical section
         synchronized (fte) {
-            int remainingBufferLength = buffer.length;
-            
-            while (remainingBufferLength > 0) {
-                int blockNumber = fte.inode.findBlockNumber(fte.seekPtr);
-                if (blockNumber == -1) {
-                    short freeLocation = (short) superblock.getFreeBlock();
-                    int status = fte.inode.submitBlock(fte.seekPtr, freeLocation);
-                    if (status == 1) { // block is in use
+            int buffLength = buffer.length;
+
+            // while the buffer has space then write
+            while (buffLength > 0) {
+                // find the block to write at
+                int blockLocation = fte.inode.findTargetBlock(fte.seekPtr);
+                // if the blockLocation is invalid then find a new free location
+                if (blockLocation == -1) {
+
+                    short newLocation = (short) superblock.getFreeBlock();
+                    // if at this location it's okay to edit we'll get a 0, otherwise
+                    // 1 == it's in use, 2 means the indirect is null
+                    int status = fte.inode.submitBlock(fte.seekPtr, newLocation);
+                    // nowhere to write so print an error and return -1 to signal it's an error
+                    if (status == 1) {
                         SysLib.cerr("Filesystem error on write\n");
                         return -1;
                     }
-                    if (status == 2) { // indirect is empty, have to find new block
-                        freeLocation = (short) this.superblock.getFreeBlock();
-                        // attempt to set index block to the new location
-                        if (!fte.inode.setIndexBlock(freeLocation)) {
-                            SysLib.cerr("ThreadOS: panic on write\n");
+                    // indirect is null so look for a new spot
+                    if (status == 2) {
+                        // find a new location
+                        newLocation = (short) superblock.getFreeBlock();
+                        // get the status ofthis new location
+                        status = fte.inode.submitBlock(fte.seekPtr, newLocation);
+                        // if this new location is set then return error
+                        if (!fte.inode.setIndexBlock((short) status)) {
+                            SysLib.cerr("Filesystem error on write\n");
                             return -1;
                         }
-                        // attempt to submit the original location again
-                        if (fte.inode.submitBlock(fte.seekPtr, freeLocation) != 0) {
-                            SysLib.cerr("ThreadOS: panic on write\n");
+                        // if the status of this spot isn't okay to edit then we'll return an
+                        // error because we tried twice
+                        if (fte.inode.submitBlock(fte.seekPtr, newLocation) != 0) {
+                            SysLib.cerr("Filesystem error on write\n");
                             return -1;
                         }
                     }
-                    blockNumber = freeLocation;
+                    // the block location is now our new location
+                    blockLocation = newLocation;
                 }
 
-                int toWrite = updateAndWrite(bufferIndex, fte, buffer, remainingBufferLength);
+                byte[] data = new byte[Disk.blockSize];
 
-                // update values based on length of write
-                fte.seekPtr += toWrite;
-                bufferIndex += toWrite;
-                remainingBufferLength -= toWrite;
+                // if we read and there's an error at this location then we exit
+                if (SysLib.rawread(blockLocation, data) == -1) {
+                    System.exit(2);
+                }
 
-                // if fte's pointer is bigger than inode, then adjust the inode to match the pointer
+                // get where to read on this disk
+                int diskReadLocation = fte.seekPtr % Disk.blockSize;
+                // get where in the block to start
+                int whereInBlock = Disk.blockSize - diskReadLocation;
+                // the amount we can write
+                int amountToWrite = Math.min(whereInBlock, buffLength);
+
+                // copy the amount from the buffer to the data
+                System.arraycopy(buffer, location, data, diskReadLocation, amountToWrite);
+
+                // now rewrite to this location
+                SysLib.rawwrite(blockLocation, data);
+
+                // update the pointer
+                fte.seekPtr += amountToWrite;
+                // update the location
+                location += amountToWrite;
+                // decrease the buffLength since we wrote that amount
+                buffLength -= amountToWrite;
+
+                // if the pointer length is longer then the inode length
+                // update the inode length to the pointer
                 if (fte.seekPtr > fte.inode.length) {
                     fte.inode.length = fte.seekPtr;
                 }
             }
+            // write this number to disk
             fte.inode.toDisk(fte.iNumber);
-            return bufferIndex;
+
+            // return the location of where we wrote
+            return location;
         }
-    }
-
-    private int updateAndWrite(int bufferIndex, FileTableEntry fte, byte buffer[], int remainingBufferLength) {
-        byte[] data = new byte[Disk.blockSize];
-        // attempt to read at the location
-        if (SysLib.rawread(bufferIndex, data) == -1) {
-            System.exit(2);
-        }
-        // adjust pointer based on disk size
-        int newPtr = fte.seekPtr % Disk.blockSize;
-        int blockPlace = Disk.blockSize - newPtr;
-        int toWrite = Math.min(blockPlace, remainingBufferLength);
-
-        // copy the buffer into data
-        System.arraycopy(buffer, bufferIndex, data, newPtr, toWrite);
-
-        // write to disk
-        SysLib.rawwrite(bufferIndex, data);
-        return toWrite;
     }
 
 	// seek
