@@ -18,6 +18,7 @@ public class FileTable {
     public synchronized FileTableEntry falloc(String filename, String mode) {
         Inode inode;
         short iNumber;
+        boolean inodeCreated = False;
         while (true) {
             if (filename.equals("/")) { // root directory
                 iNumber = 0;
