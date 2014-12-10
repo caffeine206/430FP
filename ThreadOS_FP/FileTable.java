@@ -16,9 +16,9 @@ public class FileTable {
     // immediately write back this inode to the disk
     // return a reference to this file (structure) table entry
     public synchronized FileTableEntry falloc(String filename, String mode) {
-        Inode inode;
-        short iNumber;
-        boolean inodeCreated = False;
+        Inode inode = null;
+        short iNumber = 0;
+        boolean needNode = true;
         while (true) {
             if (filename.equals("/")) { // root directory
                 iNumber = 0;
@@ -29,15 +29,17 @@ public class FileTable {
                 break;
             }
             inode = new Inode(iNumber);
-            if (mode.compareTo("r") == 0) { // read
+            if (mode.equals("r")) { // read
                 if ((inode.flag == 0) || (inode.flag == 1)) {
                     inode.flag = 1;
+                    needNode = false;
                     break;
                 }
                 try {
                     wait();
                 } catch (InterruptedException e) {
                 }
+                needNode = false;
             } else { // write
                 if ((inode.flag == 0) || (inode.flag == 3)) {
                     inode.flag = 2;
@@ -53,11 +55,11 @@ public class FileTable {
                 }
             }
         }
-        if (mode.compareTo("r") != 0) { // not reading
+        if (!mode.equals("r") && needNode) {
             iNumber = dir.ialloc(filename);
             inode = new Inode();
             inode.flag = 2;
-        } else {
+        } else if (needNode) {
             return null;
         }
         inode.count++;
