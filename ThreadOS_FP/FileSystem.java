@@ -62,7 +62,7 @@ public class FileSystem {
                 // using findBlockNumber
                 int blockNumber = fte.inode.findBlockNumber(fte.seekPtr);
                 if (blockNumber == -1) {    // if the blockNumber is -1, that means the seekPtr has left valid block space and there cannot be any more bytes to read.
-                    return bufferIndex;
+                    break;
                 }
                 // read data from the current block into a byte buffer
                 byte[] blockData = new byte[Disk.blockSize];
@@ -84,6 +84,7 @@ public class FileSystem {
                 fte.seekPtr += readLength;
                 bufferIndex += readLength;
             }
+            if (bufferIndex == -1) return -5;
             return bufferIndex;
         }
     }
