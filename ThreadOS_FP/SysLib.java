@@ -50,8 +50,8 @@ public class SysLib {
 
     // destroys the file specified by fileName. If the file is currently open, it is not destroyed until the last open on it is closed, but new attempts to open it will fail.
     public static int delete(String fileName) {
-        String[] args = new String[]{fileName};
-        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE, Kernel.DELETE, 0, args);
+        //String[] args = new String[]{fileName};
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE, Kernel.DELETE, 0, fileName);
     }
 
     // returns the size in bytes of the file indicated by fd.

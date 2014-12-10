@@ -34,6 +34,7 @@ class Test5 extends Thread {
       SysLib.cout("Correct behavior of seeking in a small file.....1\n");
     if ( test8( ) ) // open "css430" with "w+"
       SysLib.cout("Correct behavior of read/writing a small file.0.5\n");
+      /*
     test9( );        // open "bothell" with "w+"
     if ( test10( ) ) // write buf[512 * 13]
       SysLib.cout("Correct behavior of writing a lot of bytes....0.5\n");
@@ -52,7 +53,7 @@ class Test5 extends Thread {
       SysLib.cout("Correct behavior of creating over 40 files ...0.5\n");
     if ( test18( ) ) // "uwb1" read/written among Test5 and Test6
       SysLib.cout("Correct behavior of two fds to the same file..0.5\n");
-    
+    */
     SysLib.cout( "Test completed\n" );
     SysLib.exit( );
   }
@@ -127,7 +128,7 @@ class Test5 extends Thread {
     //.............................................."
     SysLib.cout( "5: reopen and read from \"css430\".." );
     fd = SysLib.open( "css430", "r" );
-
+    SysLib.cout("\n fd = " + fd + "\n");
     byte[] tmpBuf = new byte[16];
     size = SysLib.read( fd, tmpBuf );
     if ( size != 16 ) {
